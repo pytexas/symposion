@@ -1,4 +1,5 @@
 import datetime
+from itertools import chain
 
 from django.db import models
 from django.core.urlresolvers import reverse
@@ -46,6 +47,15 @@ class Speaker(models.Model):
     
     def get_absolute_url(self):
         return reverse("speaker_edit")
+    
+    @property
+    def presentations(self):
+        # schedule may not be installed so we need to check for sessions
+        if hasattr(self, "sessions"):
+            sessions = self.sessions.exclude(slot=None)
+            additional_sessions = self.presentation_set.exclude(slot=None)
+            return list(chain(sessions, additional_sessions))
+        return None
     
     @property
     def email(self):
