@@ -5,6 +5,7 @@ from django.db import models
 
 from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
+from django.core.urlresolvers import reverse
 
 from biblion import creole_parser
 
@@ -171,7 +172,7 @@ class Presentation(models.Model):
             yield speaker
  
     def get_absolute_url(self):
-        return ("schedule_presentation", [self.pk])
+        return reverse("schedule_presentation", args=[self.pk])
 
     def __unicode__(self):
         return u"%s" % self.title
