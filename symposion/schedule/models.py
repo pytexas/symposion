@@ -167,7 +167,10 @@ class Presentation(models.Model):
         yield self.speaker
         for speaker in self.additional_speakers.all():
             yield speaker
-    
+ 
+    def get_absolute_url(self):
+        return ("schedule_presentation", [self.pk])
+
     def __unicode__(self):
         return u"%s" % self.title
 
