@@ -1,29 +1,10 @@
 import datetime
 
 from django.db import models
-from django.db.models import Q
 
-from biblion import creole_parser
+from markitup.fields import MarkupField
 
-
-class ProposalKind(models.Model):
-    
-    name = models.CharField(max_length=100)
-    start = models.DateTimeField(null=True, blank=True)
-    end = models.DateTimeField(null=True, blank=True)
-    closed = models.NullBooleanField()
-    
-    @classmethod
-    def available(cls):
-        now = datetime.datetime.now()
-        return cls._default_manager.filter(
-            Q(start__lt=now) | Q(start=None),
-            Q(end__gt=now) | Q(end=None),
-            Q(closed=False) | Q(closed=None),
-        )
-    
-    def __unicode__(self):
-        return self.name
+from symposion.conference.models import PresentationKind, PresentationCategory
 
 
 class Proposal(models.Model):
@@ -37,22 +18,33 @@ class Proposal(models.Model):
         (AUDIENCE_LEVEL_INTERMEDIATE, "Intermediate"),
         (AUDIENCE_LEVEL_EXPERIENCED, "Experienced"),
     ]
+
+    DURATION_CHOICES = [
+        (0, "No preference"),
+        (1, "I prefer a 30 minute slot"),
+        (2, "I prefer a 45 minute slot"),
+    ]
     
     title = models.CharField(max_length=100)
     description = models.TextField(
         max_length = 400, # @@@ need to enforce 400 in UI
-        help_text = "Brief one paragraph blurb (will be public if accepted). Must be 400 characters or less"
+        help_text = "If your talk is accepted this will be made public and printed in the program. Should be one paragraph, maximum 400 characters."
     )
-    kind = models.ForeignKey(ProposalKind)
-    abstract = models.TextField(
-        help_text = "More detailed description (will be public if accepted). You can use <a href='http://wikicreole.org/' target='_blank'>creole</a> markup. <a id='preview' href='#'>Preview</a>",
+    kind = models.ForeignKey(PresentationKind)
+    category = models.ForeignKey(PresentationCategory)
+    abstract = MarkupField(
+        help_text = "Detailed description and outline. Will be made public if your talk is accepted. Edit using <a href='http://warpedvisions.org/projects/markdown-cheat-sheet/' target='_blank'>Markdown</a>."
     )
-    abstract_html = models.TextField(editable=False)
     audience_level = models.IntegerField(choices=AUDIENCE_LEVELS)
-    additional_notes = models.TextField(
+    additional_notes = MarkupField(
         blank=True,
-        help_text = "Anything else you'd like the program committee to know when making their selection: your past speaking experience, open source community experience, etc."
+        help_text = "Anything else you'd like the program committee to know when making their selection: your past speaking experience, open source community experience, etc. Edit using <a href='http://warpedvisions.org/projects/markdown-cheat-sheet/' target='_blank'>Markdown</a>."
     )
+    extreme = models.BooleanField(
+        default=False,
+        help_text = "'Extreme' talks are advanced talks with little or no introductory material. See <a href='http://us.pycon.org/2012/speaker/extreme/' target='_blank'>http://us.pycon.org/2012/speaker/extreme/</a> for details."
+    )
+    duration = models.IntegerField(choices=DURATION_CHOICES)
     submitted = models.DateTimeField(
         default = datetime.datetime.now,
         editable = False,
@@ -61,12 +53,8 @@ class Proposal(models.Model):
     additional_speakers = models.ManyToManyField("speakers.Speaker", blank=True)
     cancelled = models.BooleanField(default=False)
     
-    def save(self, *args, **kwargs):
-        self.abstract_html = creole_parser.parse(self.abstract)
-        super(Proposal, self).save(*args, **kwargs)
-    
     def can_edit(self):
-        return self.kind in ProposalKind.available()
+        return self.kind in PresentationKind.available()
     
     @property
     def number(self):

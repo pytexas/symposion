@@ -38,6 +38,7 @@ def proposal_submit(request):
             proposal = form.save(commit=False)
             proposal.speaker = speaker_profile
             proposal.save()
+            form.save_m2m()
             messages.success(request, "Talk proposal submitted.")
             if "add-speakers" in request.POST:
                 return redirect("proposal_speaker_manage", proposal.pk)
@@ -144,7 +145,7 @@ def proposal_edit(request, pk):
         if form.is_valid():
             form.save()
             messages.success(request, "Proposal updated.")
-            return redirect("proposal_edit", proposal.pk)
+            return redirect("proposal_detail", proposal.pk)
     else:
         form = ProposalEditForm(instance=proposal)
     ctx = {

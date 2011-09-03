@@ -1,23 +1,41 @@
 from django import forms
 from django.db.models import Q
 
-from symposion.proposals.models import Proposal, ProposalKind
+from markitup.widgets import MarkItUpWidget
+
+from symposion.conference.models import PresentationKind, PresentationCategory
+from symposion.proposals.models import Proposal
 
 
 class ProposalForm(forms.ModelForm):
     
     class Meta:
         model = Proposal
-        exclude = [
-            "speaker",
-            "additional_speakers",
-            "cancelled",
+        fields = [
+            "title",
+            "kind",
+            "category",
+            "audience_level",
+            "extreme",
+            "duration",
+            "description",
+            "abstract",
+            "additional_notes",
         ]
+        widgets = {
+            "abstract": MarkItUpWidget(),
+            "additional_notes": MarkItUpWidget(),
+        }
     
     def __init__(self, *args, **kwargs):
         super(ProposalForm, self).__init__(*args, **kwargs)
         self.fields["kind"] = forms.ModelChoiceField(
-            queryset=ProposalKind.available()
+            queryset = PresentationKind.available(),
+            widget = forms.RadioSelect(),
+            empty_label = None
+        )
+        self.fields["category"] = forms.ModelChoiceField(
+            queryset = PresentationCategory.objects.order_by("name")
         )
     
     def clean_description(self):

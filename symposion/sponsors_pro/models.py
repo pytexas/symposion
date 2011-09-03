@@ -8,6 +8,10 @@ from django.utils.translation import ugettext_lazy as _
 
 from django.contrib.auth.models import User
 
+from symposion.sponsors_pro import SPONSOR_COORDINATORS
+from symposion.sponsors_pro.managers import SponsorManager
+from symposion.utils.mail import send_email
+
 
 class SponsorLevel(models.Model):
     
@@ -36,6 +40,8 @@ class Sponsor(models.Model):
     level = models.ForeignKey(SponsorLevel, verbose_name=_("level"), null=True)
     added = models.DateTimeField(_("added"), default=datetime.datetime.now)
     active = models.NullBooleanField(_("active"))
+
+    objects = SponsorManager()
     
     def __unicode__(self):
         return self.name
@@ -43,7 +49,7 @@ class Sponsor(models.Model):
     def get_absolute_url(self):
         if self.active:
             return reverse("sponsor_detail", kwargs={"pk": self.pk})
-        return reverse("sponsor_index")
+        return reverse("sponsor_info")
     
     @property
     def website_logo_url(self):
@@ -56,6 +62,25 @@ class Sponsor(models.Model):
                 if benefits[0].upload:
                     self._website_logo_url = benefits[0].upload.url
         return self._website_logo_url
+    
+    @property
+    def listing_text(self):
+        if not hasattr(self, '_listing_text'):
+            self._listing_text = None
+            benefits = self.sponsor_benefits.filter(benefit__id=8)
+            if benefits.count():
+                self._listing_text = benefits[0].text
+        return self._listing_text
+
+    @property
+    def website_logo(self):
+        if not hasattr(self, '_website_logo'):
+            self._website_logo = None
+            benefits = self.sponsor_benefits.filter(benefit__type="weblogo", upload__isnull=False)
+            if benefits.count():
+                if benefits[0].upload:
+                    self._website_logo = benefits[0].upload
+        return self._website_logo
     
     def reset_benefits(self):
         """
@@ -95,6 +120,13 @@ class Sponsor(models.Model):
         # Any remaining sponsor benefits that don't normally belong to
         # this level are set to inactive
         self.sponsor_benefits.exclude(pk__in=allowed_benefits).update(active=False, max_words=None, other_limits="")
+    
+    def send_coordinator_emails(self):
+        for user in User.objects.filter(groups__name=SPONSOR_COORDINATORS):
+            send_email(
+                [user.email], "sponsor_signup",
+                context = {"sponsor": self}
+            )
 
 
 def _store_initial_level(sender, instance, **kwargs):
@@ -107,6 +139,12 @@ def _check_level_change(sender, instance, created, **kwargs):
     if instance and (created or instance.level_id != instance._initial_level_id):
         instance.reset_benefits()
 post_save.connect(_check_level_change, sender=Sponsor)
+
+
+def _send_sponsor_notification_emails(sender, instance, created, **kwargs):
+    if instance and created:
+        instance.send_coordinator_emails()
+post_save.connect(_send_sponsor_notification_emails, sender=Sponsor)
 
 
 class Benefit(models.Model):
