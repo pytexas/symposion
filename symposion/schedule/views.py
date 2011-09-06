@@ -252,9 +252,8 @@ def schedule_conference(request):
     ctx = {
         "user_hash": user_hash,
         "timetables": [
-            Timetable(Slot.objects.filter(start__week_day=3), user=request.user),
-            Timetable(Slot.objects.filter(start__week_day=4), user=request.user),
             Timetable(Slot.objects.filter(start__week_day=5), user=request.user),
+            Timetable(Slot.objects.filter(start__week_day=6), user=request.user),
         ],
         "timezone": settings.SCHEDULE_TIMEZONE,
         "csrf_token": csrf(request),
