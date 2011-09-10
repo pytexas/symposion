@@ -251,13 +251,20 @@ def schedule_conference(request):
     
     ctx = {
         "user_hash": user_hash,
-        "timetables": [
-            Timetable(Slot.objects.filter(start__week_day=5), user=request.user),
-            Timetable(Slot.objects.filter(start__week_day=6), user=request.user),
-        ],
+        "timetables": {
+            'saturday': Timetable(
+                Slot.objects.filter(start__week_day=7).order_by('start'), 
+                user=request.user
+            ),
+            'sunday': Timetable(
+                Slot.objects.filter(start__week_day=1).order_by('start'), 
+                user=request.user
+            ),
+        },
         "timezone": settings.SCHEDULE_TIMEZONE,
         "csrf_token": csrf(request),
     }
+
     ctx = RequestContext(request, ctx)
     return render_to_response("schedule/conference.html", ctx)
 
