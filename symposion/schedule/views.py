@@ -269,6 +269,33 @@ def schedule_conference(request):
     return render_to_response("schedule/conference.html", ctx)
 
 
+def schedule_conference_print(request):
+    
+    if request.user.is_authenticated():
+        user_hash = hash_for_user(request.user)
+    else:
+        user_hash = None
+    
+    ctx = {
+        "user_hash": user_hash,
+        "timetables": {
+            'saturday': Timetable(
+                Slot.objects.filter(start__week_day=7).order_by('start'), 
+                user=request.user
+            ),
+            'sunday': Timetable(
+                Slot.objects.filter(start__week_day=1).order_by('start'), 
+                user=request.user
+            ),
+        },
+        "timezone": settings.SCHEDULE_TIMEZONE,
+        "csrf_token": csrf(request),
+    }
+
+    ctx = RequestContext(request, ctx)
+    return render_to_response("schedule/conference-print.html", ctx)
+
+
 @login_required
 def schedule_slot_add(request, slot_id, kind):
     
